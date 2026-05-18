@@ -2,17 +2,13 @@ services:
 
   vllm:
     image: nvcr.io/nvidia/vllm:26.04-py3
-    runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
-      - VLLM_USE_V1_ENGINE=1
     volumes:
       - huggingface_cache:/root/.cache/huggingface
-      - ./fixed_chat_template.jinja:/app/fixed_chat_template.jinja
     command: >
       vllm serve Qwen/Qwen3.6-35B-A3B-FP8
-      --host 0.0.0.0
       --max-model-len 262144
       --max-num-seqs 4
       --max-num-batched-tokens 16384
@@ -26,9 +22,6 @@ services:
       --optimization-level 3
       --enable-prefix-caching
       --mamba-cache-mode align
-      --chat-template /app/fixed_chat_template.jinja
-      --default-chat-template-kwargs '{"preserve_thinking":true}'
-      --speculative-config '{"method":"dflash","model":"z-lab/Qwen3.6-35B-A3B-DFlash","num_speculative_tokens":15}'
       --override-generation-config '{"temperature":0.6,"top_p":0.95,"top_k":20,"min_p":0.0,"presence_penalty":0.0,"repetition_penalty":1.0}'
       --tensor-parallel-size 1
       --served-model-name qwen3.6-35b-a3b
@@ -36,12 +29,13 @@ services:
       --port 8000
     ports:
       - "8000:8000"   # expose directly only if needed for debugging; otherwise remove
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 120s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     restart: unless-stopped
 
   litellm:
