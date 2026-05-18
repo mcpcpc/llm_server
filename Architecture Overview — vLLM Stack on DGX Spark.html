@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vLLM Stack — Architecture Overview</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3250;
+    --accent: #76b900;
+    --accent2: #4f8ef7;
+    --accent3: #f7934f;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Cascadia Code', 'Fira Code', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.6; padding: 2rem 1rem; }
+  .container { max-width: 900px; margin: 0 auto; }
+
+  h1 { font-size: 1.8rem; color: var(--accent); margin-bottom: 0.25rem; }
+  h2 { font-size: 1.2rem; color: var(--accent2); margin: 2rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+  h3 { font-size: 1rem; color: var(--text); margin-bottom: 0.4rem; }
+  p { color: var(--muted); margin-bottom: 0.75rem; font-size: 0.95rem; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: 0.95rem; }
+
+  /* Architecture Diagram */
+  .diagram { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; margin: 1.5rem 0; }
+  .diagram-row { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 0.5rem 0; flex-wrap: wrap; }
+  .box {
+    border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600;
+    text-align: center; min-width: 140px; border: 1px solid transparent;
+  }
+  .box-client  { background: #1e293b; border-color: var(--accent2); color: var(--accent2); }
+  .box-litellm { background: #1e2a1e; border-color: var(--accent); color: var(--accent); }
+  .box-vllm    { background: #2a1e1e; border-color: var(--accent3); color: var(--accent3); }
+  .box-model   { background: #2a2a1e; border-color: #f7e24f; color: #f7e24f; }
+  .box-pg      { background: #1e2230; border-color: #7ba7d4; color: #7ba7d4; }
+  .arrow { color: var(--muted); font-size: 1.2rem; }
+  .arrow-down { text-align: center; color: var(--muted); font-size: 1.2rem; margin: 0.1rem 0; }
+  .diagram-label { font-size: 0.75rem; color: var(--muted); text-align: center; margin-top: 0.25rem; }
+
+  /* Components */
+  .components { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin: 1rem 0; }
+  .component {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.2rem; transition: border-color 0.2s;
+  }
+  .component:hover { border-color: var(--accent2); }
+  .component-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+  .badge {
+    font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.5rem;
+    border-radius: 4px; font-family: var(--mono); white-space: nowrap;
+  }
+  .badge-green  { background: #1a2e1a; color: var(--accent); border: 1px solid var(--accent); }
+  .badge-blue   { background: #1a1f2e; color: var(--accent2); border: 1px solid var(--accent2); }
+  .badge-orange { background: #2e1f1a; color: var(--accent3); border: 1px solid var(--accent3); }
+  .badge-yellow { background: #2e2b1a; color: #f7e24f; border: 1px solid #f7e24f; }
+  .badge-teal   { background: #1a2b2e; color: #4fd7c4; border: 1px solid #4fd7c4; }
+
+  /* Flow steps */
+  .flow { counter-reset: step; margin: 1rem 0; }
+  .step {
+    display: flex; gap: 1rem; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;
+  }
+  .step-num {
+    counter-increment: step;
+    background: var(--accent2); color: #0f1117;
+    border-radius: 50%; width: 28px; height: 28px; min-width: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem;
+  }
+  .step-content h3 { font-size: 0.9rem; margin-bottom: 0.2rem; }
+  .step-content p { margin: 0; font-size: 0.85rem; }
+
+  /* Key settings */
+  .settings { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; margin: 1rem 0; }
+  .setting-row { display: flex; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-key { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); min-width: 220px; padding-top: 0.1rem; }
+  .setting-val { font-size: 0.85rem; color: var(--muted); }
+
+  /* Ports table */
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th { background: var(--surface2); color: var(--accent2); text-align: left; padding: 0.6rem 1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); color: var(--muted); }
+  td:first-child { font-family: var(--mono); color: var(--text); font-size: 0.85rem; }
+  tr:last-child td { border-bottom: none; }
+
+  .note { background: #1a2230; border-left: 3px solid var(--accent2); border-radius: 0 6px 6px 0; padding: 0.8rem 1rem; margin: 1rem 0; font-size: 0.85rem; color: var(--muted); }
+  .note strong { color: var(--accent2); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>vLLM Stack — Architecture Overview</h1>
+  <p class="subtitle">Self-hosted LLM serving on NVIDIA DGX Spark · Qwen3.6-35B-A3B-FP8 · Docker Compose</p>
+
+  <!-- Diagram -->
+  <h2>System Architecture</h2>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="box box-client">continue.dev</div>
+      <div class="box box-client">Pi Agent</div>
+      <div class="box box-client">API clients</div>
+    </div>
+    <div class="arrow-down">↓ OpenAI-compatible API (Bearer token)</div>
+    <div class="diagram-row">
+      <div class="box box-litellm">LiteLLM Proxy<br><small>:4000</small></div>
+      <div class="arrow">↔</div>
+      <div class="box box-pg">PostgreSQL<br><small>key &amp; usage store</small></div>
+    </div>
+    <div class="arrow-down">↓ forwarded request (internal)</div>
+    <div class="diagram-row">
+      <div class="box box-vllm">vLLM Server<br><small>:8000</small></div>
+    </div>
+    <div class="arrow-down">↓</div>
+    <div class="diagram-row">
+      <div class="box box-model">Qwen3.6-35B-A3B-FP8<br><small>128GB unified memory</small></div>
+    </div>
+    <p class="diagram-label">All services run as Docker containers on the DGX Spark via Docker Compose</p>
+  </div>
+
+  <!-- Components -->
+  <h2>Components</h2>
+  <div class="components">
+    <div class="component">
+      <div class="component-header">
+        <span class="badge badge-orange">vLLM</span>
+        <h3>Inference Engine</h3>
+      </div>
+      <p>Serves the model with an OpenAI-compatible REST API. Handles batching, KV caching, speculative decoding, and GPU memory management. Exposes <code>/v1/chat/completions</code> and <code>/metrics</code>.</p>
+    </div>
+    <div class="component">
+      <div class="component-header">
+        <span class="badge badge-green">LiteLLM</span>
+        <h3>Proxy &amp; Auth Gateway</h3>
+      </div>
+      <p>Sits in front of vLLM. Manages per-user API keys, tracks token usage, enforces budgets, and provides a management UI. All client traffic passes through here.</p>
+    </div>
+    <div class="component">
+      <div class="component-header">
+        <span class="badge badge-teal">PostgreSQL</span>
+        <h3>Persistence Store</h3>
+      </div>
+      <p>Stores LiteLLM's API keys, user records, and usage logs persistently across restarts. Without this, keys and usage history would be lost on container restart.</p>
+    </div>
+    <div class="component">
+      <div class="component-header">
+        <span class="badge badge-yellow">Qwen3.6-35B-A3B-FP8</span>
+        <h3>The Model</h3>
+      </div>
+      <p>A 35B Mixture-of-Experts coding model with only 3B active parameters per token. FP8 quantized for speed. Achieves ~78 tok/s on the DGX Spark — well-suited for interactive coding workflows.</p>
+    </div>
+  </div>
+
+  <!-- Request Flow -->
+  <h2>Request Flow</h2>
+  <div class="flow">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Client sends request</h3>
+        <p>continue.dev or Pi Agent sends a <code>POST /v1/chat/completions</code> request to LiteLLM on port 4000, with a per-user Bearer token and model name <code>qwen3.6-35b-a3b</code>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>LiteLLM authenticates &amp; logs</h3>
+        <p>LiteLLM validates the API key against PostgreSQL, records the request metadata (user, tokens, timestamp), enforces any budget limits, then forwards the request to vLLM internally.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>vLLM processes the request</h3>
+        <p>vLLM schedules the request, checks the prefix cache for reuse, and runs inference on the GPU. Speculative decoding (DFlash) drafts 15 tokens ahead to increase throughput.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3>Tokens streamed back</h3>
+        <p>Generated tokens are streamed back through LiteLLM to the client in real time. LiteLLM records final token counts in PostgreSQL for usage tracking.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key vLLM Settings -->
+  <h2>Key vLLM Optimizations</h2>
+  <div class="settings">
+    <div class="setting-row">
+      <span class="setting-key">--attention-backend flashinfer</span>
+      <span class="setting-val">Hardware-optimized attention kernels for NVIDIA Blackwell (GB10), significantly faster than the default backend.</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-key">--moe-backend triton</span>
+      <span class="setting-val">Triton-based MoE routing kernels, optimized for the sparse expert architecture of Qwen3.6-35B-A3B.</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-key">--speculative-config dflash</span>
+      <span class="setting-val">Uses a small draft model (DFlash) to speculatively generate 15 tokens ahead, verified by the main model. Major throughput boost for coding workloads.</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-key">--enable-prefix-caching</span>
+      <span class="setting-val">Caches KV state for repeated prompt prefixes (e.g. system prompts). Reduces latency on subsequent requests from the same user/tool.</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-key">--load-format fastsafetensors</span>
+      <span class="setting-val">Faster model weight loading on startup using optimized safetensors I/O.</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-key">--optimization-level 3</span>
+      <span class="setting-val">Maximum kernel fusion and compile-time optimization. Increases startup time slightly but improves sustained throughput.</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-key">VLLM_USE_V1_ENGINE=1</span>
+      <span class="setting-val">Enables the new vLLM v1 engine architecture, which is required to unlock the full performance of the above optimizations.</span>
+    </div>
+  </div>
+
+  <!-- Ports -->
+  <h2>Ports &amp; Endpoints</h2>
+  <table>
+    <thead><tr><th>Service</th><th>Port</th><th>Key Endpoints</th></tr></thead>
+    <tbody>
+      <tr><td>LiteLLM</td><td>4000</td><td>/v1/chat/completions · /key/generate · /ui · /metrics</td></tr>
+      <tr><td>vLLM</td><td>8000</td><td>/v1/chat/completions · /health · /metrics (internal only)</td></tr>
+      <tr><td>PostgreSQL</td><td>5432</td><td>Internal only — LiteLLM database</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>Note:</strong> Clients (continue.dev, Pi Agent) should point exclusively at LiteLLM on port 4000 — never directly at vLLM on port 8000. Port 8000 should not be exposed beyond the Docker network in production.
+  </div>
+
+  <!-- User Key Management -->
+  <h2>User Key Management</h2>
+  <p>Per-user API keys are created via the LiteLLM API using the master key. Each key is tied to a user ID, enabling per-user usage tracking and optional budget enforcement.</p>
+  <div class="settings">
+    <div class="setting-row">
+      <span class="setting-key">POST /key/generate</span>
+      <span class="setting-val">Create a new user key. Supply <code>user_id</code>, <code>key_alias</code>, and optionally <code>max_budget</code> + <code>budget_duration</code>.</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-key">GET /key/list</span>
+      <span class="setting-val">List all active keys and their usage statistics.</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-key">POST /key/delete</span>
+      <span class="setting-val">Revoke a key immediately. The user's next request will be rejected.</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-key">LiteLLM UI · :4000/ui</span>
+      <span class="setting-val">Web dashboard for key management, usage graphs, and per-user token breakdowns. No extra tooling required.</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
