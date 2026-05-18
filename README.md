@@ -46,7 +46,7 @@ Point clients at:
 
 - **API Base:** `http://<server-ip>:4000/v1`
 - **API Key:** the per-user key generated above
-- **Model:** `qwen2.5-coder-72b`
+- **Model:** `qwen3.6-35b-a3b`
 
 ## Access UIs
 
