@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Guide</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3250;
+    --accent: #76b900;
+    --accent2: #4f8ef7;
+    --accent3: #f7934f;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.7; }
+
+  /* Layout */
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: 220px; height: 100vh;
+    background: var(--surface); border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem; overflow-y: auto; z-index: 100;
+  }
+  .sidebar h2 { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem; }
+  .sidebar a {
+    display: block; padding: 0.4rem 0.6rem; font-size: 0.85rem; color: var(--muted);
+    text-decoration: none; border-radius: 4px; margin-bottom: 0.2rem; transition: all 0.15s;
+  }
+  .sidebar a:hover, .sidebar a.active { background: var(--surface2); color: var(--accent2); }
+  .sidebar .logo { font-size: 1rem; font-weight: 700; color: var(--accent); margin-bottom: 1.5rem; display: block; }
+  .sidebar .section-label { font-size: 0.7rem; color: var(--border); text-transform: uppercase; letter-spacing: 0.08em; margin: 1rem 0 0.3rem 0.6rem; }
+
+  main { margin-left: 220px; padding: 2.5rem 3rem; max-width: 860px; }
+
+  h1 { font-size: 2rem; color: var(--accent); margin-bottom: 0.3rem; }
+  h2 { font-size: 1.3rem; color: var(--accent2); margin: 2.5rem 0 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); scroll-margin-top: 1rem; }
+  h3 { font-size: 1rem; color: var(--text); margin: 1.2rem 0 0.5rem; }
+  p { color: var(--muted); margin-bottom: 0.75rem; font-size: 0.95rem; }
+  .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 2rem; }
+
+  /* Code blocks */
+  pre {
+    background: #0a0c12; border: 1px solid var(--border); border-radius: 8px;
+    padding: 1.1rem 1.2rem; overflow-x: auto; margin: 0.75rem 0 1.2rem;
+    font-family: var(--mono); font-size: 0.82rem; line-height: 1.7;
+  }
+  code { font-family: var(--mono); font-size: 0.85rem; }
+  .inline-code {
+    background: #0a0c12; border: 1px solid var(--border); border-radius: 3px;
+    padding: 0.1rem 0.4rem; font-family: var(--mono); font-size: 0.82rem; color: var(--accent3);
+  }
+  .comment { color: #4a5568; }
+  .key { color: #76b900; }
+  .val { color: #f7934f; }
+  .str { color: #4f8ef7; }
+
+  /* Cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.4rem; margin-bottom: 1rem;
+  }
+  .card:hover { border-color: var(--accent2); }
+
+  /* Steps */
+  .steps { counter-reset: step; }
+  .step {
+    display: flex; gap: 1rem; margin-bottom: 1rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.2rem;
+  }
+  .step-num {
+    counter-increment: step;
+    background: var(--accent2); color: #0f1117; border-radius: 50%;
+    width: 26px; height: 26px; min-width: 26px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.8rem; margin-top: 0.1rem;
+  }
+  .step-body h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
+  .step-body p { margin: 0; font-size: 0.88rem; }
+
+  /* Agent tabs */
+  .tabs { display: flex; gap: 0.5rem; margin-bottom: 0; flex-wrap: wrap; }
+  .tab {
+    padding: 0.5rem 1.1rem; border-radius: 6px 6px 0 0; cursor: pointer;
+    font-size: 0.85rem; font-weight: 600; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted); border-bottom: none;
+    transition: all 0.15s;
+  }
+  .tab.active { background: var(--surface); color: var(--accent2); border-color: var(--accent2); }
+  .tab-content { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 0 8px 8px 8px; padding: 1.4rem; }
+  .tab-content.active { display: block; }
+
+  /* Info boxes */
+  .info  { background: #0d1829; border-left: 3px solid var(--accent2); border-radius: 0 6px 6px 0; padding: 0.8rem 1rem; margin: 1rem 0; font-size: 0.88rem; color: var(--muted); }
+  .warn  { background: #1f1a0d; border-left: 3px solid var(--accent3); border-radius: 0 6px 6px 0; padding: 0.8rem 1rem; margin: 1rem 0; font-size: 0.88rem; color: var(--muted); }
+  .info strong { color: var(--accent2); }
+  .warn strong { color: var(--accent3); }
+
+  /* Contact card */
+  .contact {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.4rem; display: flex; align-items: center; gap: 1.4rem;
+  }
+  .avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, #76b900, #4f8ef7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 700; color: #0f1117; flex-shrink: 0;
+  }
+  .contact-info h3 { margin-bottom: 0.2rem; font-size: 1rem; }
+  .contact-info p { margin: 0; font-size: 0.88rem; }
+  .contact-info a { color: var(--accent2); text-decoration: none; }
+  .contact-info a:hover { text-decoration: underline; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th { background: var(--surface2); color: var(--accent2); text-align: left; padding: 0.6rem 1rem; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); color: var(--muted); }
+  td:first-child { font-family: var(--mono); color: var(--text); font-size: 0.85rem; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Badge */
+  .badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; font-family: var(--mono); vertical-align: middle; margin-left: 0.4rem; }
+  .badge-green  { background: #1a2e1a; color: var(--accent);  border: 1px solid var(--accent); }
+  .badge-blue   { background: #1a1f2e; color: var(--accent2); border: 1px solid var(--accent2); }
+  .badge-orange { background: #2e1f1a; color: var(--accent3); border: 1px solid var(--accent3); }
+
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    main { margin-left: 0; padding: 1.5rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <span class="logo">⚡ LLM Server</span>
+  <h2>Navigation</h2>
+  <span class="section-label">Getting Started</span>
+  <a href="#overview">Overview</a>
+  <a href="#access">Getting Access</a>
+  <a href="#connection">Connection Details</a>
+  <span class="section-label">Client Setup</span>
+  <a href="#continue">continue.dev</a>
+  <a href="#piagent">Pi Agent</a>
+  <a href="#ollama">Ollama Compatible</a>
+  <a href="#curl">cURL / API</a>
+  <span class="section-label">Reference</span>
+  <a href="#models">Available Models</a>
+  <a href="#tips">Usage Tips</a>
+  <a href="#contact">Contact & Support</a>
+</nav>
+
+<main>
+  <h1>LLM Server -- User Guide</h1>
+  <p class="subtitle">Self-hosted AI coding assistant · Powered by Qwen3.6-35B-A3B · GE HealthCare Engineering</p>
+
+  <!-- Overview -->
+  <h2 id="overview">Overview</h2>
+  <p>This server provides access to a high-performance, locally-hosted large language model optimised for software engineering tasks. All inference runs on-premises on an NVIDIA DGX Spark -- your code and prompts never leave the network.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin:1rem 0;">
+    <div class="card">
+      <div style="font-size:1.4rem;margin-bottom:0.4rem;">🔒</div>
+      <h3>Private by default</h3>
+      <p style="font-size:0.85rem;margin:0;">On-premises inference. No data sent to third-party APIs.</p>
+    </div>
+    <div class="card">
+      <div style="font-size:1.4rem;margin-bottom:0.4rem;">⚡</div>
+      <h3>Fast &amp; capable</h3>
+      <p style="font-size:0.85rem;margin:0;">35B MoE model with speculative decoding. Optimised for coding.</p>
+    </div>
+    <div class="card">
+      <div style="font-size:1.4rem;margin-bottom:0.4rem;">🔌</div>
+      <h3>OpenAI-compatible</h3>
+      <p style="font-size:0.85rem;margin:0;">Works with any tool that supports a custom OpenAI API endpoint.</p>
+    </div>
+    <div class="card">
+      <div style="font-size:1.4rem;margin-bottom:0.4rem;">📊</div>
+      <h3>Usage tracked</h3>
+      <p style="font-size:0.85rem;margin:0;">Per-user API keys with token usage and budget visibility.</p>
+    </div>
+  </div>
+
+  <!-- Getting Access -->
+  <h2 id="access">Getting Access</h2>
+  <p>Access requires a personal API key. Contact the administrator to request one -- see the <a href="#contact" style="color:var(--accent2);">Contact & Support</a> section below.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Request an API key</h3>
+        <p>Email anonymous with your name and intended use. You'll receive a key in the format <span class="inline-code">sk-xxxxxxxxxxxx</span>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Store your key securely</h3>
+        <p>Treat your API key like a password. Don't commit it to version control or share it. If compromised, contact the administrator to revoke and reissue it.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Configure your client</h3>
+        <p>Follow the setup guide for your preferred tool below. You'll need the server URL and your API key.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connection Details -->
+  <h2 id="connection">Connection Details</h2>
+  <div class="warn"><strong>Note:</strong> Replace <strong>SERVER_IP</strong> below with the actual server IP or hostname provided by your administrator.</div>
+
+  <table>
+    <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>API Base URL</td><td><span class="inline-code">http://SERVER_IP:4000/v1</span></td></tr>
+      <tr><td>Model Name</td><td><span class="inline-code">qwen3.6-35b-a3b</span></td></tr>
+      <tr><td>API Key</td><td>Your personal <span class="inline-code">sk-...</span> key</td></tr>
+      <tr><td>Protocol</td><td>OpenAI-compatible REST API</td></tr>
+      <tr><td>Streaming</td><td>Supported</td></tr>
+      <tr><td>Max Context</td><td>262,144 tokens</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Client Setup -->
+  <h2 id="continue">continue.dev <span class="badge badge-blue">Recommended</span></h2>
+  <p>continue.dev is the recommended client for inline code completion and chat. Install the VS Code or JetBrains extension, then add the following to your <span class="inline-code">~/.continue/config.yaml</span>:</p>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab(this, 'continue-chat')">Chat Model</div>
+    <div class="tab" onclick="switchTab(this, 'continue-autocomplete')">Autocomplete</div>
+  </div>
+  <div id="continue-chat" class="tab-content active">
+    <p style="font-size:0.88rem;margin-bottom:0.75rem;">Add under the <span class="inline-code">models</span> section of your config for chat and inline assist:</p>
+    <pre><span class="comment"># ~/.continue/config.yaml</span>
+models:
+  - <span class="key">name</span>: <span class="str">LLM Server (Qwen3.6)</span>
+    <span class="key">provider</span>: <span class="str">openai</span>
+    <span class="key">model</span>: <span class="str">qwen3.6-35b-a3b</span>
+    <span class="key">apiBase</span>: <span class="str">http://SERVER_IP:4000/v1</span>
+    <span class="key">apiKey</span>: <span class="str">sk-your-key-here</span></pre>
+  </div>
+  <div id="continue-autocomplete" class="tab-content">
+    <p style="font-size:0.88rem;margin-bottom:0.75rem;">Add under the <span class="inline-code">tabAutocompleteModel</span> section for fast inline completions:</p>
+    <pre><span class="comment"># ~/.continue/config.yaml</span>
+tabAutocompleteModel:
+  <span class="key">name</span>: <span class="str">LLM Server (Autocomplete)</span>
+  <span class="key">provider</span>: <span class="str">openai</span>
+  <span class="key">model</span>: <span class="str">qwen3.6-35b-a3b</span>
+  <span class="key">apiBase</span>: <span class="str">http://SERVER_IP:4000/v1</span>
+  <span class="key">apiKey</span>: <span class="str">sk-your-key-here</span></pre>
+  </div>
+
+  <div class="info"><strong>Tip:</strong> In VS Code, open the continue.dev sidebar, click the model selector at the bottom, and choose <strong>LLM Server (Qwen3.6)</strong> to activate it.</div>
+
+  <!-- Pi Agent -->
+  <h2 id="piagent">Pi Agent <span class="badge badge-green">Agentic</span></h2>
+  <p>Pi Agent is an agentic coding tool that can plan, write, and execute code autonomously. The server's tool-calling and reasoning parsers are pre-configured to work with Pi Agent's agentic workflows.</p>
+
+  <h3>Configuration</h3>
+  <pre><span class="comment"># Pi Agent settings -- set via UI or config file</span>
+<span class="key">API Base URL</span>:  <span class="str">http://SERVER_IP:4000/v1</span>
+<span class="key">API Key</span>:       <span class="str">sk-your-key-here</span>
+<span class="key">Model</span>:         <span class="str">qwen3.6-35b-a3b</span>
+<span class="key">Provider</span>:      <span class="str">openai</span></pre>
+
+  <h3>Environment Variables (alternative)</h3>
+  <pre><span class="key">OPENAI_API_BASE</span>=<span class="str">http://SERVER_IP:4000/v1</span>
+<span class="key">OPENAI_API_KEY</span>=<span class="str">sk-your-key-here</span>
+<span class="key">OPENAI_MODEL</span>=<span class="str">qwen3.6-35b-a3b</span></pre>
+
+  <div class="info"><strong>Note:</strong> Tool calling and chain-of-thought reasoning are enabled on the server. Pi Agent's agentic features will work without any additional configuration.</div>
+
+  <!-- Ollama Compatible -->
+  <h2 id="ollama">Ollama-Compatible Clients <span class="badge badge-orange">Compatible</span></h2>
+  <p>Any client that supports Ollama or a custom OpenAI-compatible endpoint can connect to this server. The API is fully OpenAI-compatible, so point the base URL at the server instead of Ollama's local port.</p>
+
+  <h3>Generic OpenAI-compatible config</h3>
+  <pre><span class="key">Base URL</span>:  <span class="str">http://SERVER_IP:4000/v1</span>
+<span class="key">API Key</span>:   <span class="str">sk-your-key-here</span>
+<span class="key">Model</span>:     <span class="str">qwen3.6-35b-a3b</span></pre>
+
+  <h3>Open WebUI</h3>
+  <pre><span class="comment"># Admin → Settings → Connections → OpenAI API</span>
+<span class="key">API URL</span>:   <span class="str">http://SERVER_IP:4000/v1</span>
+<span class="key">API Key</span>:   <span class="str">sk-your-key-here</span></pre>
+
+  <h3>LM Studio</h3>
+  <pre><span class="comment"># LM Studio → Developer → Server → Use remote model</span>
+<span class="key">Remote URL</span>:   <span class="str">http://SERVER_IP:4000</span>
+<span class="key">API Key</span>:      <span class="str">sk-your-key-here</span>
+<span class="key">Model</span>:        <span class="str">qwen3.6-35b-a3b</span></pre>
+
+  <!-- cURL / API -->
+  <h2 id="curl">cURL / Direct API Access</h2>
+  <p>You can call the API directly from the terminal or any HTTP client. The endpoint is fully OpenAI-compatible.</p>
+
+  <h3>Basic chat completion</h3>
+  <pre>curl http://SERVER_IP:4000/v1/chat/completions \
+  -H <span class="str">"Authorization: Bearer sk-your-key-here"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "model": "qwen3.6-35b-a3b",
+    "messages": [
+      {"role": "user", "content": "Write a Python function to parse JSON"}
+    ],
+    "stream": false
+  }'</span></pre>
+
+  <h3>Streaming response</h3>
+  <pre>curl http://SERVER_IP:4000/v1/chat/completions \
+  -H <span class="str">"Authorization: Bearer sk-your-key-here"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "model": "qwen3.6-35b-a3b",
+    "messages": [
+      {"role": "user", "content": "Explain async/await in Python"}
+    ],
+    "stream": true
+  }'</span></pre>
+
+  <h3>Python (openai SDK)</h3>
+  <pre><span class="key">from</span> openai <span class="key">import</span> OpenAI
+
+client = OpenAI(
+    base_url=<span class="str">"http://SERVER_IP:4000/v1"</span>,
+    api_key=<span class="str">"sk-your-key-here"</span>
+)
+
+response = client.chat.completions.create(
+    model=<span class="str">"qwen3.6-35b-a3b"</span>,
+    messages=[
+        {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"Review this code for bugs"</span>}
+    ]
+)
+<span class="key">print</span>(response.choices[0].message.content)</pre>
+
+  <!-- Available Models -->
+  <h2 id="models">Available Models</h2>
+  <table>
+    <thead><tr><th>Model Name</th><th>Type</th><th>Best For</th><th>Context</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>qwen3.6-35b-a3b</td>
+        <td>Chat / Completion</td>
+        <td>Code generation, review, agentic tasks, reasoning</td>
+        <td>262K tokens</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="info"><strong>Note:</strong> Additional models may be added in future. Contact the administrator if you have a specific model request.</div>
+
+  <!-- Usage Tips -->
+  <h2 id="tips">Usage Tips</h2>
+
+  <div class="card">
+    <h3>🧠 Thinking mode</h3>
+    <p>Qwen3.6 supports chain-of-thought reasoning. For complex problems, ask it to "think step by step" -- the model will reason through the problem before responding, improving accuracy on hard tasks.</p>
+  </div>
+  <div class="card">
+    <h3>📄 Large context</h3>
+    <p>With a 262K token context window, you can paste entire files or large codebases. This is particularly useful for code review, refactoring, or understanding unfamiliar projects.</p>
+  </div>
+  <div class="card">
+    <h3>🔧 Tool calling</h3>
+    <p>The server has tool calling enabled. Agentic tools like Pi Agent can use this for multi-step tasks -- planning, writing code, running tests, and iterating -- without manual intervention.</p>
+  </div>
+  <div class="card">
+    <h3>⚡ Prefix caching</h3>
+    <p>If you send the same system prompt repeatedly (e.g. a coding persona or project context), the server caches it automatically. Subsequent requests with the same prefix will be faster.</p>
+  </div>
+  <div class="card">
+    <h3>🔑 Key security</h3>
+    <p>Never hardcode your API key in source files. Use environment variables (<span class="inline-code">OPENAI_API_KEY</span>) or a secrets manager. If you believe your key is compromised, contact the administrator immediately.</p>
+  </div>
+
+  <!-- Contact -->
+  <h2 id="contact">Contact & Support</h2>
+  <p>For API key requests, access issues, or general questions about the LLM server, contact:</p>
+
+  <div class="contact">
+    <div class="avatar">MC</div>
+    <div class="contact-info">
+      <h3>anonymous</h3>
+      <p style="margin-bottom:0.3rem;">LLM Server Administrator · GE HealthCare Engineering</p>
+      <p><a href="mailto:noreply@github.com">noreply@github.com</a></p>
+    </div>
+  </div>
+
+  <div class="info" style="margin-top:1rem;"><strong>When contacting support, please include:</strong> your name, team, intended use case, and any error messages you're seeing. This helps get you set up faster.</div>
+
+</main>
+
+<script>
+  function switchTab(el, id) {
+    const parent = el.closest('main') || document;
+    parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    parent.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById(id).classList.add('active');
+  }
+
+  // Highlight active nav link on scroll
+  const sections = document.querySelectorAll('h2[id]');
+  const navLinks = document.querySelectorAll('.sidebar a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) current = s.id; });
+    navLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+</body>
+</html>
