@@ -79,7 +79,7 @@
   .step-content h3 { font-size: 0.9rem; margin-bottom: 0.2rem; }
   .step-content p { margin: 0; font-size: 0.85rem; }
 
-  /* Key settings */
+  /* Settings */
   .settings { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; margin: 1rem 0; }
   .setting-row { display: flex; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
   .setting-row:last-child { border-bottom: none; }
@@ -136,14 +136,14 @@
         <span class="badge badge-orange">vLLM</span>
         <h3>Inference Engine</h3>
       </div>
-      <p>Serves the model with an OpenAI-compatible REST API. Handles batching, KV caching, speculative decoding, and GPU memory management. Exposes <code>/v1/chat/completions</code> and <code>/metrics</code>.</p>
+      <p>Serves the model with an OpenAI-compatible REST API. Handles batching, KV caching, speculative decoding, and GPU memory management. Exposes <code>/v1/chat/completions</code> on port 8000 (internal only).</p>
     </div>
     <div class="component">
       <div class="component-header">
         <span class="badge badge-green">LiteLLM</span>
         <h3>Proxy &amp; Auth Gateway</h3>
       </div>
-      <p>Sits in front of vLLM. Manages per-user API keys, tracks token usage, enforces budgets, and provides a management UI. All client traffic passes through here.</p>
+      <p>Sits in front of vLLM. Manages per-user API keys, tracks token usage, enforces budgets, and provides a management UI. All client traffic passes through here on port 4000.</p>
     </div>
     <div class="component">
       <div class="component-header">
@@ -157,7 +157,7 @@
         <span class="badge badge-yellow">Qwen3.6-35B-A3B-FP8</span>
         <h3>The Model</h3>
       </div>
-      <p>A 35B Mixture-of-Experts coding model with only 3B active parameters per token. FP8 quantized for speed. Runs at 40% GPU memory utilization, leaving headroom for the KV cache at 262K context. Uses MTP speculative decoding with 2 tokens for throughput gains.</p>
+      <p>A 35B Mixture-of-Experts coding model with only 3B active parameters per token. Pre-quantized to FP8. Runs at 40% GPU memory utilization, leaving the remainder for the KV cache at 262K context. Uses MTP speculative decoding with 2 tokens for throughput gains.</p>
     </div>
   </div>
 
@@ -182,7 +182,7 @@
       <div class="step-num">3</div>
       <div class="step-content">
         <h3>vLLM processes the request</h3>
-        <p>vLLM schedules the request, checks the prefix cache for reuse, and runs inference on the GPU. Speculative decoding (DFlash) drafts 15 tokens ahead to increase throughput.</p>
+        <p>vLLM schedules the request, checks the prefix cache for reuse, and runs inference on the GPU. MTP speculative decoding drafts 2 tokens ahead per step to increase throughput.</p>
       </div>
     </div>
     <div class="step">
@@ -195,43 +195,43 @@
   </div>
 
   <!-- Key vLLM Settings -->
-  <h2>Key vLLM Optimizations</h2>
+  <h2>Key vLLM Settings</h2>
   <div class="settings">
     <div class="setting-row">
       <span class="setting-key">deploy.resources.reservations</span>
-      <span class="setting-val">Docker Compose native GPU reservation (replaces <code>runtime: nvidia</code>). Requests all NVIDIA GPUs with CUDA capability -- the recommended approach for Compose v2.</span>
+      <span class="setting-val">Docker Compose native GPU reservation. Requests all NVIDIA GPUs with CUDA capability -- the recommended approach for Compose v2, replacing the older <code>runtime: nvidia</code>.</span>
     </div>
     <div class="setting-row">
       <span class="setting-key">--gpu-memory-utilization 0.4</span>
-      <span class="setting-val">Reserves 40% of GPU memory for the model weights, leaving the remaining 60% available for the KV cache -- important for supporting the full 262K context window.</span>
+      <span class="setting-val">Reserves 40% of GPU memory for model weights, leaving the remaining 60% for the KV cache -- important for sustaining the full 262K context window.</span>
     </div>
     <div class="setting-row">
-      <span class="setting-key">--attention-backend flashinfer</span>
-      <span class="setting-val">Hardware-optimized attention kernels for NVIDIA Blackwell (GB10), significantly faster than the default backend.</span>
+      <span class="setting-key">--max-model-len 262144</span>
+      <span class="setting-val">Full 262K token context window -- suitable for large codebases and long agentic sessions.</span>
     </div>
     <div class="setting-row">
-      <span class="setting-key">--moe-backend triton</span>
-      <span class="setting-val">Triton-based MoE routing kernels, optimized for the sparse expert architecture of Qwen3.6-35B-A3B.</span>
-    </div>
-    <div class="setting-row">
-      <span class="setting-key">--speculative-config mtp</span>
-      <span class="setting-val">Uses Multi-Token Prediction (MTP) to speculatively generate 2 tokens ahead. A lighter-weight alternative to the DFlash draft model, with no second model download required.</span>
+      <span class="setting-key">--speculative-config mtp (2 tokens)</span>
+      <span class="setting-val">Multi-Token Prediction speculative decoding -- predicts 2 tokens ahead per step to improve throughput without requiring a separate draft model.</span>
     </div>
     <div class="setting-row">
       <span class="setting-key">--enable-prefix-caching</span>
-      <span class="setting-val">Caches KV state for repeated prompt prefixes (e.g. system prompts). Reduces latency on subsequent requests from the same user/tool.</span>
+      <span class="setting-val">Caches KV state for repeated prompt prefixes (e.g. system prompts). Reduces latency on subsequent requests from the same user or tool.</span>
     </div>
     <div class="setting-row">
-      <span class="setting-key">--load-format fastsafetensors</span>
-      <span class="setting-val">Faster model weight loading on startup using optimized safetensors I/O.</span>
+      <span class="setting-key">--enable-auto-tool-choice</span>
+      <span class="setting-val">Enables automatic tool/function calling detection, required for agentic workflows in Pi Agent and continue.dev.</span>
     </div>
     <div class="setting-row">
-      <span class="setting-key">--optimization-level 3</span>
-      <span class="setting-val">Maximum kernel fusion and compile-time optimization. Increases startup time slightly but improves sustained throughput.</span>
+      <span class="setting-key">--tool-call-parser qwen3_coder</span>
+      <span class="setting-val">Qwen3-specific parser for extracting structured tool call outputs from model responses.</span>
     </div>
     <div class="setting-row">
-      <span class="setting-key">VLLM_USE_V1_ENGINE=1</span>
-      <span class="setting-val">Enables the new vLLM v1 engine architecture, which is required to unlock the full performance of the above optimizations.</span>
+      <span class="setting-key">--reasoning-parser qwen3</span>
+      <span class="setting-val">Parses Qwen3's chain-of-thought reasoning tokens, keeping thinking and final response content correctly separated.</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-key">--mamba-cache-mode align</span>
+      <span class="setting-val">Aligns Mamba state cache layout for the hybrid attention/SSM architecture used in Qwen3.6.</span>
     </div>
   </div>
 
