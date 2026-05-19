@@ -9,21 +9,15 @@ services:
       - huggingface_cache:/root/.cache/huggingface
     command: >
       vllm serve Qwen/Qwen3.6-35B-A3B-FP8
-      --max-model-len 262144
-      --max-num-seqs 4
-      --max-num-batched-tokens 16384
       --gpu-memory-utilization 0.8
       --enable-auto-tool-choice
       --tool-call-parser qwen3_coder
       --reasoning-parser qwen3
-      --load-format fastsafetensors
-      --attention-backend flashinfer
-      --moe-backend triton
-      --optimization-level 3
       --enable-prefix-caching
       --mamba-cache-mode align
-      --override-generation-config '{"temperature":0.6,"top_p":0.95,"top_k":20,"min_p":0.0,"presence_penalty":0.0,"repetition_penalty":1.0}'
-      --tensor-parallel-size 1
+      --tensor-parallel-size 8
+      --max-model-len 262144
+      --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":2}'
       --served-model-name qwen3.6-35b-a3b
       --host 0.0.0.0
       --port 8000
@@ -46,7 +40,6 @@ services:
     command: >
       --config /app/config.yaml
       --port 4000
-      --detailed_debug
     ports:
       - "4000:4000"
     environment:
