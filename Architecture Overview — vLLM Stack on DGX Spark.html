@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>vLLM Stack — Architecture Overview</title>
+<title>vLLM Stack -- Architecture Overview</title>
 <style>
   :root {
     --bg: #0f1117;
@@ -100,7 +100,7 @@
 <body>
 <div class="container">
 
-  <h1>vLLM Stack — Architecture Overview</h1>
+  <h1>vLLM Stack -- Architecture Overview</h1>
   <p class="subtitle">Self-hosted LLM serving on NVIDIA DGX Spark · Qwen3.6-35B-A3B-FP8 · Docker Compose</p>
 
   <!-- Diagram -->
@@ -111,21 +111,21 @@
       <div class="box box-client">Pi Agent</div>
       <div class="box box-client">API clients</div>
     </div>
-    <div class="arrow-down">↓ OpenAI-compatible API (Bearer token)</div>
+    <div class="arrow-down">↓ OpenAI-compatible API (Bearer token) · :4000</div>
     <div class="diagram-row">
       <div class="box box-litellm">LiteLLM Proxy<br><small>:4000</small></div>
       <div class="arrow">↔</div>
       <div class="box box-pg">PostgreSQL<br><small>key &amp; usage store</small></div>
     </div>
-    <div class="arrow-down">↓ forwarded request (internal)</div>
+    <div class="arrow-down">↓ forwarded request (internal · :8000)</div>
     <div class="diagram-row">
       <div class="box box-vllm">vLLM Server<br><small>:8000</small></div>
     </div>
     <div class="arrow-down">↓</div>
     <div class="diagram-row">
-      <div class="box box-model">Qwen3.6-35B-A3B-FP8<br><small>128GB unified memory</small></div>
+      <div class="box box-model">Qwen3.6-35B-A3B-FP8<br><small>40% GPU memory · MTP speculative decoding</small></div>
     </div>
-    <p class="diagram-label">All services run as Docker containers on the DGX Spark via Docker Compose</p>
+    <p class="diagram-label">All services run as Docker containers on the DGX Spark via Docker Compose · GPU via deploy.resources</p>
   </div>
 
   <!-- Components -->
@@ -157,7 +157,7 @@
         <span class="badge badge-yellow">Qwen3.6-35B-A3B-FP8</span>
         <h3>The Model</h3>
       </div>
-      <p>A 35B Mixture-of-Experts coding model with only 3B active parameters per token. FP8 quantized for speed. Achieves ~78 tok/s on the DGX Spark — well-suited for interactive coding workflows.</p>
+      <p>A 35B Mixture-of-Experts coding model with only 3B active parameters per token. FP8 quantized for speed. Runs at 40% GPU memory utilization, leaving headroom for the KV cache at 262K context. Uses MTP speculative decoding with 2 tokens for throughput gains.</p>
     </div>
   </div>
 
@@ -198,6 +198,14 @@
   <h2>Key vLLM Optimizations</h2>
   <div class="settings">
     <div class="setting-row">
+      <span class="setting-key">deploy.resources.reservations</span>
+      <span class="setting-val">Docker Compose native GPU reservation (replaces <code>runtime: nvidia</code>). Requests all NVIDIA GPUs with CUDA capability -- the recommended approach for Compose v2.</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-key">--gpu-memory-utilization 0.4</span>
+      <span class="setting-val">Reserves 40% of GPU memory for the model weights, leaving the remaining 60% available for the KV cache -- important for supporting the full 262K context window.</span>
+    </div>
+    <div class="setting-row">
       <span class="setting-key">--attention-backend flashinfer</span>
       <span class="setting-val">Hardware-optimized attention kernels for NVIDIA Blackwell (GB10), significantly faster than the default backend.</span>
     </div>
@@ -206,8 +214,8 @@
       <span class="setting-val">Triton-based MoE routing kernels, optimized for the sparse expert architecture of Qwen3.6-35B-A3B.</span>
     </div>
     <div class="setting-row">
-      <span class="setting-key">--speculative-config dflash</span>
-      <span class="setting-val">Uses a small draft model (DFlash) to speculatively generate 15 tokens ahead, verified by the main model. Major throughput boost for coding workloads.</span>
+      <span class="setting-key">--speculative-config mtp</span>
+      <span class="setting-val">Uses Multi-Token Prediction (MTP) to speculatively generate 2 tokens ahead. A lighter-weight alternative to the DFlash draft model, with no second model download required.</span>
     </div>
     <div class="setting-row">
       <span class="setting-key">--enable-prefix-caching</span>
@@ -234,12 +242,12 @@
     <tbody>
       <tr><td>LiteLLM</td><td>4000</td><td>/v1/chat/completions · /key/generate · /ui · /metrics</td></tr>
       <tr><td>vLLM</td><td>8000</td><td>/v1/chat/completions · /health · /metrics (internal only)</td></tr>
-      <tr><td>PostgreSQL</td><td>5432</td><td>Internal only — LiteLLM database</td></tr>
+      <tr><td>PostgreSQL</td><td>5432</td><td>Internal only -- LiteLLM database</td></tr>
     </tbody>
   </table>
 
   <div class="note">
-    <strong>Note:</strong> Clients (continue.dev, Pi Agent) should point exclusively at LiteLLM on port 4000 — never directly at vLLM on port 8000. Port 8000 should not be exposed beyond the Docker network in production.
+    <strong>Note:</strong> Clients (continue.dev, Pi Agent) should point exclusively at LiteLLM on port 4000 -- never directly at vLLM on port 8000. Port 8000 should not be exposed beyond the Docker network in production.
   </div>
 
   <!-- User Key Management -->
