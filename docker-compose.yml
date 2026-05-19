@@ -27,8 +27,6 @@ services:
       --served-model-name qwen3.6-35b-a3b
       --host 0.0.0.0
       --port 8000
-    ports:
-      - "8000:8000"   # expose directly only if needed for debugging; otherwise remove
     deploy:
       resources:
         reservations:
