@@ -15,16 +15,13 @@ services:
       set -e;
       huggingface-cli download Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8;
       huggingface-cli download Qwen/Qwen2.5-Coder-7B;
-      huggingface-cli download Qwen/Qwen3-Coder-Next-FP8;
       "
     networks:
       - llm_egress
-    restart: "no"
+    restart: no
 
-  vllm-chat:
+  vllm-coder:
     image: nvcr.io/nvidia/vllm:26.04-py3
-    profiles:
-      - chat
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
@@ -35,8 +32,11 @@ services:
       - huggingface_cache:/root/.cache/huggingface
     command: >
       vllm serve Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
-      --gpu-memory-utilization 0.60
+      --gpu-memory-utilization 0.72
       --max-model-len 32768
+      --max-num-seqs 16
+      --max-num-batched-tokens 32768
+      --kv-cache-dtype fp8
       --enable-auto-tool-choice
       --tool-call-parser qwen3_coder
       --enable-prefix-caching
@@ -75,66 +75,8 @@ services:
         max-file: "5"
     restart: unless-stopped
 
-  vllm-best:
-    image: nvcr.io/nvidia/vllm:26.04-py3
-    profiles:
-      - best
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      - HF_TOKEN=${HF_TOKEN}
-      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
-      - HF_HOME=/root/.cache/huggingface
-    volumes:
-      - huggingface_cache:/root/.cache/huggingface
-    command: >
-      vllm serve Qwen/Qwen3-Coder-Next-FP8
-      --gpu-memory-utilization 0.75
-      --max-model-len 16384
-      --enable-auto-tool-choice
-      --tool-call-parser qwen3_coder
-      --enable-prefix-caching
-      --served-model-name qwen3-coder-next
-      --host 0.0.0.0
-      --port 8000
-    ipc: host
-    shm_size: "16gb"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      stack: 67108864
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    networks:
-      - llm_internal
-      - llm_egress
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
-      interval: 30s
-      timeout: 10s
-      retries: 80
-      start_period: 10m
-    security_opt:
-      - no-new-privileges:true
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "5"
-    restart: unless-stopped
-
   vllm-autocomplete:
     image: nvcr.io/nvidia/vllm:26.04-py3
-    profiles:
-      - chat
-      - best
-      - autocomplete
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
@@ -145,8 +87,10 @@ services:
       - huggingface_cache:/root/.cache/huggingface
     command: >
       vllm serve Qwen/Qwen2.5-Coder-7B
-      --gpu-memory-utilization 0.20
+      --gpu-memory-utilization 0.18
       --max-model-len 8192
+      --max-num-seqs 16
+      --max-num-batched-tokens 8192
       --enable-prefix-caching
       --served-model-name qwen2.5-coder-7b
       --host 0.0.0.0
@@ -186,6 +130,10 @@ services:
   litellm:
     image: ghcr.io/berriai/litellm:v1.85.1
     depends_on:
+      vllm-coder:
+        condition: service_healthy
+      vllm-autocomplete:
+        condition: service_healthy
       postgres:
         condition: service_healthy
     volumes:

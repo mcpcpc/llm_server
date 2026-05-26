@@ -1,9 +1,15 @@
 model_list:
-  - model_name: qwen3.6-35b-a3b
+  - model_name: coding-chat
     litellm_params:
-      model: openai/qwen3.6-35b-a3b
-      api_base: http://vllm:8000/v1
-      api_key: "none"
+      model: openai/qwen3-coder-30b-a3b
+      api_base: http://vllm-coder:8000/v1
+      api_key: EMPTY
+
+  - model_name: coding-autocomplete
+    litellm_params:
+      model: openai/qwen2.5-coder-7b
+      api_base: http://vllm-autocomplete:8000/v1
+      api_key: EMPTY
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
