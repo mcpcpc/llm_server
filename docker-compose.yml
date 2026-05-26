@@ -148,11 +148,16 @@ services:
       - llm_internal
       - llm_edge
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4000/health', timeout=5)"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 45s
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:4000/health \
+          -H 'Authorization: Bearer $$LITELLM_MASTER_KEY' || exit 1"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
     security_opt:
       - no-new-privileges:true
     cap_drop:
