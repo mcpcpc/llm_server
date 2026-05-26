@@ -1,25 +1,55 @@
 services:
 
-  vllm:
+  hf-preload:
     image: nvcr.io/nvidia/vllm:26.04-py3
+    profiles:
+      - preload
     environment:
-      - NVIDIA_VISIBLE_DEVICES=all
+      - HF_TOKEN=${HF_TOKEN}
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+      - HF_HOME=/root/.cache/huggingface
     volumes:
       - huggingface_cache:/root/.cache/huggingface
     command: >
-      vllm serve Qwen/Qwen3.6-35B-A3B-FP8
-      --gpu-memory-utilization 0.4
+      bash -lc "
+      set -e;
+      huggingface-cli download Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8;
+      huggingface-cli download Qwen/Qwen2.5-Coder-7B;
+      huggingface-cli download Qwen/Qwen3-Coder-Next-FP8;
+      "
+    networks:
+      - llm_egress
+    restart: "no"
+
+  vllm-chat:
+    image: nvcr.io/nvidia/vllm:26.04-py3
+    profiles:
+      - chat
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - HF_TOKEN=${HF_TOKEN}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+      - HF_HOME=/root/.cache/huggingface
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+    command: >
+      vllm serve Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+      --gpu-memory-utilization 0.60
+      --max-model-len 32768
       --enable-auto-tool-choice
       --tool-call-parser qwen3_coder
-      --reasoning-parser qwen3
       --enable-prefix-caching
-      --mamba-cache-mode align
-      --max-model-len 262144
-      --speculative-config '{"method":"mtp","num_speculative_tokens":2}'
-      --served-model-name qwen3.6-35b-a3b
+      --served-model-name qwen3-coder-30b-a3b
       --host 0.0.0.0
       --port 8000
+    ipc: host
+    shm_size: "16gb"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack: 67108864
     deploy:
       resources:
         reservations:
@@ -27,36 +57,232 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    networks:
+      - llm_internal
+      - llm_egress
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 60
+      start_period: 5m
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    restart: unless-stopped
+
+  vllm-best:
+    image: nvcr.io/nvidia/vllm:26.04-py3
+    profiles:
+      - best
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - HF_TOKEN=${HF_TOKEN}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+      - HF_HOME=/root/.cache/huggingface
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+    command: >
+      vllm serve Qwen/Qwen3-Coder-Next-FP8
+      --gpu-memory-utilization 0.75
+      --max-model-len 16384
+      --enable-auto-tool-choice
+      --tool-call-parser qwen3_coder
+      --enable-prefix-caching
+      --served-model-name qwen3-coder-next
+      --host 0.0.0.0
+      --port 8000
+    ipc: host
+    shm_size: "16gb"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack: 67108864
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - llm_internal
+      - llm_egress
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 80
+      start_period: 10m
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    restart: unless-stopped
+
+  vllm-autocomplete:
+    image: nvcr.io/nvidia/vllm:26.04-py3
+    profiles:
+      - chat
+      - best
+      - autocomplete
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - HF_TOKEN=${HF_TOKEN}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+      - HF_HOME=/root/.cache/huggingface
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+    command: >
+      vllm serve Qwen/Qwen2.5-Coder-7B
+      --gpu-memory-utilization 0.20
+      --max-model-len 8192
+      --enable-prefix-caching
+      --served-model-name qwen2.5-coder-7b
+      --host 0.0.0.0
+      --port 8000
+    ipc: host
+    shm_size: "8gb"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack: 67108864
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - llm_internal
+      - llm_egress
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 60
+      start_period: 3m
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
     restart: unless-stopped
 
   litellm:
-    image: ghcr.io/berriai/litellm:main-latest
+    image: ghcr.io/berriai/litellm:v1.85.1
     depends_on:
-      - vllm
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
-      - ./litellm_config.yaml:/app/config.yaml
+      - ./litellm_config.yaml:/app/config.yaml:ro
     command: >
       --config /app/config.yaml
       --port 4000
-    ports:
-      - "4000:4000"
     environment:
       - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
       - DATABASE_URL=postgresql://litellm:${POSTGRES_PASSWORD}@postgres:5432/litellm
+    networks:
+      - llm_internal
+      - llm_edge
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4000/health', timeout=5)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 2g
+    cpus: "2.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
     restart: unless-stopped
 
   postgres:
-    image: postgres:16
+    image: postgres:17.9
     environment:
       - POSTGRES_USER=litellm
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=litellm
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c max_connections=50
+      -c shared_buffers=256MB
+    networks:
+      - llm_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    mem_limit: 2g
+    cpus: "2.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     restart: unless-stopped
+
+  caddy:
+    image: caddy:2.11.3
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - llm_edge
+    depends_on:
+      litellm:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    restart: unless-stopped
+
+networks:
+  llm_internal:
+    internal: true
+  llm_edge:
+  llm_egress:
 
 volumes:
   huggingface_cache:
   postgres_data:
- 
+  caddy_data:
+  caddy_config:
