@@ -34,7 +34,16 @@ LITELLM_MASTER_KEY=sk-your-litellm-master-key
 POSTGRES_PASSWORD=replace-with-a-strong-password
 ```
 
-The Hugging Face token must have access to the Qwen model repositories being pulled.
+One way generate strong random secrets is using OpenSSL:
+
+```bash
+echo “LITELLM_MASTER_KEY=sk-$(openssl rand -hex 32)” >> /dev/null  # preview
+echo “POSTGRES_PASSWORD=$(openssl rand -hex 32)”     >> /dev/null  # preview
+```
+
+Note that the Hugging Face token must have access to the Qwen model repositories being pulled.
+
+
 
 ## Pull Images
 
