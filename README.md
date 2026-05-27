@@ -139,46 +139,8 @@ Expected logical model names:
 
 ```text
 coding-chat
-coding-best
 coding-autocomplete
 ```
-
-## LiteLLM Model Routing
-
-The intended `litellm_config.yaml` mapping is:
-
-```yaml
-model_list:
-  - model_name: coding-chat
-    litellm_params:
-      model: openai/qwen3-coder-30b-a3b
-      api_base: http://vllm-coder:8000/v1
-      api_key: EMPTY
-
-  - model_name: coding-best
-    litellm_params:
-      model: openai/qwen3-coder-30b-a3b
-      api_base: http://vllm-coder:8000/v1
-      api_key: EMPTY
-
-  - model_name: coding-autocomplete
-    litellm_params:
-      model: openai/qwen2.5-coder-7b
-      api_base: http://vllm-autocomplete:8000/v1
-      api_key: EMPTY
-
-general_settings:
-  master_key: os.environ/LITELLM_MASTER_KEY
-  database_url: os.environ/DATABASE_URL
-
-litellm_settings:
-  request_timeout: 600
-  num_retries: 2
-  drop_params: true
-  set_verbose: false
-```
-
-`coding-chat` and `coding-best` are separate logical routes that point to the same physical vLLM backend. This avoids trying to run `Qwen3-Coder-Next-FP8`, `Qwen3-Coder-30B-A3B-Instruct-FP8`, and an autocomplete model concurrently on a single DGX Spark memory pool.
 
 ## Create Per-User API Keys
 
@@ -270,6 +232,7 @@ Restart a model server:
 
 ```bash
 docker compose restart vllm-coder
+docker compose restart vllm-autocomplete
 ```
 
 Update images:
