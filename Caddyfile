@@ -1,4 +1,4 @@
-## Internal-only Lab Setup
+# # Internal-only Lab Setup
 #
 # If this is entirely internal and you do not want
 # Let’s Encrypt/public certs yet:
@@ -15,18 +15,20 @@
 #
 #     reverse_proxy litellm:4000
 # }
+#
 # That creates an internal CA-signed cert.
 #
 # Clients will need to trust the Caddy internal CA
 # certificate or they will see TLS warnings.
 #
-## Simple test-only setup
+# # Simple test-only setup
 #
 # For quick LAN testing without HTTPS
 #
 # :80 {
 #     reverse_proxy litellm:4000
 # }
+#
 
 :80 {
     reverse_proxy litellm:4000
