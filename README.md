@@ -216,6 +216,12 @@ With Caddy and DNS configured, use the HTTPS hostname from your `Caddyfile` inst
 
 ## Common Operations
 
+Administer the server remotely.
+
+```bash
+ssh -L 8080:localhost:80 user@<SERVER-IP>
+```
+
 Stop the stack:
 
 ```bash
