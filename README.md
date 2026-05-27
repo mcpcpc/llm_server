@@ -2,7 +2,7 @@
 
 This stack runs an on-prem LiteLLM gateway in front of two vLLM model servers:
 
-- `coding-chat` and `coding-best` route to `Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8`
+- `coding-chat` routes to `Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8`
 - `coding-autocomplete` routes to `Qwen/Qwen2.5-Coder-7B`
 
 The Compose file also includes a one-time Hugging Face preload job so the initial model downloads happen explicitly before the serving containers start.
@@ -14,7 +14,6 @@ The Compose file also includes a one-time Hugging Face preload job so the initia
 ├── docker-compose.yml
 ├── litellm_config.yaml
 ├── Caddyfile
-├── .env
 └── .env.template
 ```
 
@@ -194,10 +193,9 @@ Hand each user their returned `key` value. They use it as a Bearer token in Cont
 
 Point clients at LiteLLM:
 
-- **API Base:** `http://<server-ip>:4000/v1`
+- **API Base:** `http://<server-ip>/v1`
 - **API Key:** the per-user key generated above
 - **Chat Model:** `coding-chat`
-- **Best/Coder Model:** `coding-best`
 - **Autocomplete Model:** `coding-autocomplete`
 
 For Caddy-backed HTTPS, use:
@@ -238,9 +236,9 @@ curl -X POST http://localhost:4000/v1/completions \
 
 ## Access UIs
 
-| Service | URL |
-|---|---|
-| LiteLLM UI | `http://localhost:4000/ui` |
+| Service     | URL                        |
+|-------------|----------------------------|
+| LiteLLM UI  | `http://localhost:4000/ui` |
 | LiteLLM API | `http://localhost:4000/v1` |
 
 With Caddy and DNS configured, use the HTTPS hostname from your `Caddyfile` instead of `localhost`.
@@ -271,16 +269,3 @@ Update images:
 docker compose pull
 docker compose up -d
 ```
-
-## Notes for DGX Spark
-
-This deployment intentionally runs two physical vLLM instances:
-
-```text
-vllm-coder         -> Qwen3-Coder-30B-A3B-Instruct-FP8
-vllm-autocomplete  -> Qwen2.5-Coder-7B
-```
-
-The `coding-best` route is a LiteLLM logical alias to the same `vllm-coder` backend. Running a separate `Qwen3-Coder-Next-FP8` instance at the same time as the 30B coder model and autocomplete model is not recommended on a single DGX Spark because model weights, KV cache, runtime overhead, and the OS all share the same memory pool.
-
-If you later add a second GPU server, point `coding-best` at the second server's vLLM endpoint in `litellm_config.yaml`.
