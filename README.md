@@ -1,4 +1,6 @@
-# vLLM Stack Setup
+# On-Premise LLM Server
+
+## vLLM Stack Setup
 
 This stack runs an on-prem LiteLLM gateway in front of two vLLM model servers:
 
